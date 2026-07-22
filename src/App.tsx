@@ -5,6 +5,7 @@ import {
   formatDateToYYYYMMDD,
   toKobisDateStr,
   formatKoreanDate,
+  generateFallbackBoxOfficeList,
 } from "./utils/dateUtils";
 import { Navbar } from "./components/Navbar";
 import { DatePickerControl } from "./components/DatePickerControl";
@@ -73,19 +74,8 @@ export default function App() {
       } catch (err: any) {
         if (isMounted) {
           console.warn("Box office fetch failed, applying client fallback:", err);
-          // Fall back gracefully to sample box office list instead of showing broken screen
-          const fallbackList: DailyBoxOfficeItem[] = [
-            { rnum: "1", rank: "1", rankInten: "0", rankOldAndNew: "OLD", movieCd: "20233219", movieNm: "호프", openDt: "2026-07-15", salesAmt: "1344281460", salesShare: "66.9", salesInten: "-177957680", salesChange: "-11.7", salesAcc: "26601704300", audiCnt: "128899", audiInten: "-14163", audiChange: "-9.9", audiAcc: "2401617", scrnCnt: "2224", showCnt: "7696" },
-            { rnum: "2", rank: "2", rankInten: "0", rankOldAndNew: "OLD", movieCd: "20261784", movieNm: "미니언즈 & 몬스터즈", openDt: "2026-07-15", salesAmt: "185873530", salesShare: "9.2", salesInten: "14061300", salesChange: "8.2", salesAcc: "4247950130", audiCnt: "18765", audiInten: "1958", audiChange: "11.6", audiAcc: "410348", scrnCnt: "822", showCnt: "2003" },
-            { rnum: "3", rank: "3", rankInten: "0", rankOldAndNew: "OLD", movieCd: "20259946", movieNm: "모아나 2", openDt: "2026-07-08", salesAmt: "126872070", salesShare: "6.3", salesInten: "11849720", salesChange: "10.3", salesAcc: "8626153390", audiCnt: "12634", audiInten: "1540", audiChange: "13.9", audiAcc: "795817", scrnCnt: "667", showCnt: "1266" },
-            { rnum: "4", rank: "4", rankInten: "0", rankOldAndNew: "OLD", movieCd: "20242402", movieNm: "눈동자", openDt: "2026-06-24", salesAmt: "126467600", salesShare: "6.3", salesInten: "18399550", salesChange: "17", salesAcc: "14988909430", audiCnt: "12345", audiInten: "2128", audiChange: "20.8", audiAcc: "1453778", scrnCnt: "621", showCnt: "1030" },
-            { rnum: "5", rank: "5", rankInten: "0", rankOldAndNew: "OLD", movieCd: "20259781", movieNm: "토이 스토리 5", openDt: "2026-06-17", salesAmt: "84155290", salesShare: "4.2", salesInten: "6348440", salesChange: "8.2", salesAcc: "28502014390", audiCnt: "8400", audiInten: "890", audiChange: "11.9", audiAcc: "2766082", scrnCnt: "503", showCnt: "741" },
-            { rnum: "6", rank: "6", rankInten: "0", rankOldAndNew: "OLD", movieCd: "20262902", movieNm: "다윗", openDt: "2026-07-10", salesAmt: "32834750", salesShare: "1.6", salesInten: "1250550", salesChange: "4", salesAcc: "1642660820", audiCnt: "3362", audiInten: "120", audiChange: "3.7", audiAcc: "166370", scrnCnt: "306", showCnt: "369" },
-            { rnum: "7", rank: "7", rankInten: "0", rankOldAndNew: "OLD", movieCd: "20252402", movieNm: "군체", openDt: "2026-05-21", salesAmt: "13139400", salesShare: "0.7", salesInten: "1244050", salesChange: "10.5", salesAcc: "62587422650", audiCnt: "1252", audiInten: "127", audiChange: "11.3", audiAcc: "5943504", scrnCnt: "134", showCnt: "160" },
-            { rnum: "8", rank: "8", rankInten: "0", rankOldAndNew: "NEW", movieCd: "20262381", movieNm: "사랑의 하츄핑", openDt: "2026-08-05", salesAmt: "7866000", salesShare: "0.4", salesInten: "7866000", salesChange: "100", salesAcc: "7866000", audiCnt: "874", audiInten: "874", audiChange: "100", audiAcc: "874", scrnCnt: "4", showCnt: "4" },
-            { rnum: "9", rank: "9", rankInten: "-1", rankOldAndNew: "OLD", movieCd: "20263530", movieNm: "마티 슈프림", openDt: "2026-07-01", salesAmt: "8463100", salesShare: "0.4", salesInten: "-1208250", salesChange: "-12.5", salesAcc: "1279980730", audiCnt: "815", audiInten: "-66", audiChange: "-7.5", audiAcc: "118779", scrnCnt: "51", showCnt: "61" },
-            { rnum: "10", rank: "10", rankInten: "10", rankOldAndNew: "OLD", movieCd: "20248252", movieNm: "와일드 씽", openDt: "2026-06-03", salesAmt: "6654950", salesShare: "0.3", salesInten: "4904950", salesChange: "280.3", salesAcc: "12948384040", audiCnt: "713", audiInten: "510", audiChange: "251.2", audiAcc: "1341802", scrnCnt: "39", showCnt: "42" }
-          ];
+          // Fall back gracefully to sample box office list with relative open dates
+          const fallbackList: DailyBoxOfficeItem[] = generateFallbackBoxOfficeList(selectedDateStr);
           setItems(fallbackList);
           setShowRange(selectedDateStr);
           setIsFallback(true);
