@@ -62,8 +62,9 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
 
         // 1. Fetch movie info from KOBIS proxy
         const res = await fetch(`/api/movie/${movieCd}`);
-        if (!res.ok) {
-          throw new Error("영화 상세정보를 불러오는 데 실패했습니다.");
+        const ct = res.headers.get("content-type");
+        if (!res.ok || !ct || !ct.includes("application/json")) {
+          throw new Error("영화 상세정보를 불러올 수 없습니다. 잠시 후 다시 시도해주세요.");
         }
         const data = await res.json();
         
@@ -111,7 +112,7 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
           }),
         });
 
-        if (res.ok) {
+        if (res.ok && res.headers.get("content-type")?.includes("application/json")) {
           const aiData = await res.json();
           if (isMounted) {
             setAiSummary(aiData);
@@ -166,8 +167,9 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
         }),
       });
 
-      if (!res.ok) {
-        throw new Error("상세 감상평 생성 중 오류가 발생했습니다.");
+      const ct = res.headers.get("content-type");
+      if (!res.ok || !ct || !ct.includes("application/json")) {
+        throw new Error("상세 감상평 생성 중 오류가 발생했습니다. (응답 형식 오류)");
       }
 
       const reviewData = await res.json();
