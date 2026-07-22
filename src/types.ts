@@ -97,3 +97,11 @@ export interface AISummaryResponse {
   recommendedAudience: string;
   posterPrompt?: string;
 }
+
+export interface AIReviewResponse {
+  headline: string;
+  rating: number;
+  keyPoints: string[];
+  detailedReview: string;
+  recommendationReason: string;
+}

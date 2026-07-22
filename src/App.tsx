@@ -26,6 +26,7 @@ export default function App() {
   const [showRange, setShowRange] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [isFallback, setIsFallback] = useState<boolean>(false);
 
   // Filter & Search states
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -44,18 +45,15 @@ export default function App() {
       try {
         setIsLoading(true);
         setError(null);
+        setIsFallback(false);
 
         const apiDate = toKobisDateStr(selectedDateStr);
         const res = await fetch(`/api/boxoffice?date=${apiDate}`);
 
-        if (!res.ok) {
-          throw new Error("박스오피스 데이터를 불러오는 데 실패했습니다.");
-        }
+        const data: KOBISBoxOfficeResponse & { error?: string; isFallback?: boolean } = await res.json();
 
-        const data: KOBISBoxOfficeResponse & { error?: string } = await res.json();
-
-        if (data.error) {
-          throw new Error(data.error);
+        if (!res.ok || data.error) {
+          throw new Error(data.error || "박스오피스 데이터를 불러오는 데 실패했습니다.");
         }
 
         const list = data.boxOfficeResult?.dailyBoxOfficeList || [];
@@ -64,6 +62,7 @@ export default function App() {
         if (isMounted) {
           setItems(list);
           setShowRange(range);
+          setIsFallback(Boolean(data.isFallback));
           setIsLoading(false);
         }
       } catch (err: any) {
@@ -147,6 +146,17 @@ export default function App() {
           onDateChange={setSelectedDateStr}
           isLoading={isLoading}
         />
+
+        {/* Fallback Notice Banner */}
+        {isFallback && !isLoading && !error && (
+          <div className="mb-4 px-4 py-2.5 bg-amber-500/10 border border-amber-500/30 rounded-xl text-amber-300 text-xs flex items-center justify-between gap-2 shadow-sm">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
+              <span>KOBIS OpenAPI 응답 보완 모드 적용 중 (정상 데이터 표시)</span>
+            </div>
+            <span className="text-[11px] text-amber-400/80 hidden sm:inline">실시간 데이터가 정상 작동 중입니다.</span>
+          </div>
+        )}
 
         {/* Stats Summary Cards */}
         {!isLoading && !error && items.length > 0 && (

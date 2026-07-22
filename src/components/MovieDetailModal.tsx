@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { DailyBoxOfficeItem, MovieDetailInfo, AISummaryResponse } from "../types";
+import { DailyBoxOfficeItem, MovieDetailInfo, AISummaryResponse, AIReviewResponse } from "../types";
 import { formatNumber, formatKoreanWon } from "../utils/dateUtils";
 import {
   X,
@@ -17,7 +17,13 @@ import {
   Share2,
   AlertCircle,
   Tv,
-  Check
+  Check,
+  PenTool,
+  Star,
+  Copy,
+  MessageSquare,
+  Send,
+  ThumbsUp
 } from "lucide-react";
 
 interface MovieDetailModalProps {
@@ -37,6 +43,14 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
   const [aiLoading, setAiLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState<boolean>(false);
+
+  // AI Review Generator States
+  const [userNote, setUserNote] = useState<string>("");
+  const [aiReview, setAiReview] = useState<AIReviewResponse | null>(null);
+  const [reviewLoading, setReviewLoading] = useState<boolean>(false);
+  const [reviewError, setReviewError] = useState<string | null>(null);
+  const [reviewCopied, setReviewCopied] = useState<boolean>(false);
+  const [showReviewInput, setShowReviewInput] = useState<boolean>(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -125,6 +139,67 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
       setTimeout(() => setCopied(false), 2000);
     }
   };
+
+  const handleGenerateReview = async () => {
+    if (!userNote.trim()) {
+      setReviewError("간단한 감상평 메모를 입력해주세요.");
+      return;
+    }
+
+    try {
+      setReviewLoading(true);
+      setReviewError(null);
+
+      const genresStr = detail?.genres.map((g) => g.genreNm).join(", ") || "";
+      const directorsStr = detail?.directors.map((d) => d.peopleNm).join(", ") || "";
+      const actorsStr = detail?.actors.slice(0, 5).map((a) => a.peopleNm).join(", ") || "";
+
+      const res = await fetch("/api/ai-review", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          movieNm: detail?.movieNm || "영화",
+          genres: genresStr,
+          directors: directorsStr,
+          actors: actorsStr,
+          userNote: userNote.trim(),
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error("상세 감상평 생성 중 오류가 발생했습니다.");
+      }
+
+      const reviewData = await res.json();
+      if (reviewData.error) {
+        throw new Error(reviewData.error);
+      }
+
+      setAiReview(reviewData);
+    } catch (err: any) {
+      console.error("Generate AI Review error:", err);
+      setReviewError(err.message || "감상평 생성에 실패했습니다.");
+    } finally {
+      setReviewLoading(false);
+    }
+  };
+
+  const handleCopyReview = () => {
+    if (aiReview && navigator.clipboard) {
+      const formattedText = `[${detail?.movieNm || "영화"} AI 상세 감상평]\n평점: ★ ${aiReview.rating}/5.0\n한줄평: ${aiReview.headline}\n\n${aiReview.detailedReview}\n\n추천: ${aiReview.recommendationReason}`;
+      navigator.clipboard.writeText(formattedText);
+      setReviewCopied(true);
+      setTimeout(() => setReviewCopied(false), 2000);
+    }
+  };
+
+  const presetNotes = [
+    "🔥 배우들의 연기력이 압도적이었고 결말 반전이 소름 돋았음",
+    "🎬 신선한 소재와 뛰어난 연출 덕분에 몰입감 대박",
+    "😢 인물들의 서사가 감동적이라 눈물샘 자극",
+    "🎵 OST와 영상미의 조화가 예술적이었음",
+    "🍿 부담 없이 유쾌하게 즐기기 좋은 최고의 오락 영화"
+  ];
 
   // Helper for watch grade color badge
   const renderWatchGradeBadge = (gradeStr?: string) => {
@@ -347,6 +422,159 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                   <p className="text-xs text-slate-400 italic">
                     AI 분석 정보를 로딩하는 중이거나 Gemini API 설정이 준비 중입니다.
                   </p>
+                )}
+              </div>
+
+              {/* AI Detailed Review Generator Section */}
+              <div className="bg-gradient-to-br from-slate-900 via-rose-950/20 to-slate-900 border border-rose-500/30 rounded-2xl p-5 space-y-4">
+                <div className="flex items-center justify-between border-b border-rose-500/20 pb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 rounded-xl bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                      <PenTool className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-rose-200 flex items-center gap-1.5">
+                        AI 상세 감상평 작성기
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 font-semibold border border-rose-500/30">
+                          Gemini 2.5
+                        </span>
+                      </h4>
+                      <p className="text-xs text-slate-400">
+                        간단한 한 줄 메모를 입력하면 전문 평론가 스타일의 상세 감상평을 자동 완성해드립니다.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Input & Presets */}
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center gap-1">
+                      <MessageSquare className="w-3.5 h-3.5 text-rose-400" />
+                      간단한 감상평 메모 작성
+                    </label>
+                    <textarea
+                      value={userNote}
+                      onChange={(e) => setUserNote(e.target.value)}
+                      placeholder="예: 배우들의 연기력이 대박이었고 후반부 반전 연출이 소름 돋았어요. 결말에 여운이 많이 남네요!"
+                      rows={2}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500 transition-all resize-none"
+                    />
+                  </div>
+
+                  {/* Preset Tags */}
+                  <div>
+                    <div className="text-[11px] text-slate-400 mb-1.5">💡 빠른 선택 예시 메모:</div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {presetNotes.map((preset, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => setUserNote(preset)}
+                          className="text-[11px] px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800/80 text-slate-300 hover:text-white hover:border-rose-500/50 transition-all text-left"
+                        >
+                          {preset}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {reviewError && (
+                    <div className="text-xs text-rose-400 flex items-center gap-1">
+                      <AlertCircle className="w-3.5 h-3.5" />
+                      <span>{reviewError}</span>
+                    </div>
+                  )}
+
+                  <button
+                    onClick={handleGenerateReview}
+                    disabled={reviewLoading || !userNote.trim()}
+                    className="w-full py-2.5 bg-rose-600 hover:bg-rose-500 disabled:bg-slate-800 disabled:text-slate-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-rose-600/20 flex items-center justify-center gap-2 transition-all"
+                  >
+                    {reviewLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>AI가 상세 감상평을 정교하게 작성 중입니다...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4 text-amber-300" />
+                        <span>상세 감상평 생성하기</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {/* Generated AI Review Display */}
+                {aiReview && (
+                  <div className="bg-slate-950 border border-slate-800 rounded-2xl p-4 space-y-3 animate-in fade-in duration-300 mt-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-3">
+                      <div>
+                        <div className="flex items-center gap-1 text-amber-400 mb-1">
+                          {[...Array(5)].map((_, i) => (
+                            <Star
+                              key={i}
+                              className={`w-3.5 h-3.5 ${
+                                i < Math.floor(aiReview.rating)
+                                  ? "fill-amber-400 text-amber-400"
+                                  : "text-slate-700"
+                              }`}
+                            />
+                          ))}
+                          <span className="text-xs font-bold text-amber-300 ml-1">
+                            {aiReview.rating.toFixed(1)} / 5.0
+                          </span>
+                        </div>
+                        <h5 className="text-sm font-black text-white">{aiReview.headline}</h5>
+                      </div>
+
+                      <button
+                        onClick={handleCopyReview}
+                        className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 text-xs rounded-lg flex items-center gap-1.5 transition-colors"
+                      >
+                        {reviewCopied ? (
+                          <>
+                            <Check className="w-3.5 h-3.5 text-emerald-400" />
+                            <span className="text-emerald-400">복사 완료</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3.5 h-3.5 text-slate-400" />
+                            <span>감상평 복사</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+
+                    {/* Key points tags */}
+                    {aiReview.keyPoints && aiReview.keyPoints.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5">
+                        {aiReview.keyPoints.map((point, idx) => (
+                          <span
+                            key={idx}
+                            className="text-[11px] px-2.5 py-0.5 rounded-md bg-rose-500/10 text-rose-300 border border-rose-500/20 font-medium"
+                          >
+                            #{point}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Detailed Body Paragraphs */}
+                    <div className="text-xs text-slate-300 leading-relaxed space-y-2 whitespace-pre-line bg-slate-900/60 p-3 rounded-xl border border-slate-800">
+                      {aiReview.detailedReview}
+                    </div>
+
+                    {/* Recommendation note */}
+                    {aiReview.recommendationReason && (
+                      <div className="text-xs text-amber-300/90 bg-amber-500/10 border border-amber-500/20 p-2.5 rounded-xl flex items-start gap-2">
+                        <ThumbsUp className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
+                        <span>
+                          <strong>추천 대상:</strong> {aiReview.recommendationReason}
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
 
