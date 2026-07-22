@@ -6,6 +6,7 @@ import {
   toKobisDateStr,
   formatKoreanDate,
   generateFallbackBoxOfficeList,
+  sanitizeOpenDate,
 } from "./utils/dateUtils";
 import { Navbar } from "./components/Navbar";
 import { DatePickerControl } from "./components/DatePickerControl";
@@ -62,8 +63,13 @@ export default function App() {
           throw new Error(data.error);
         }
 
-        const list = data.boxOfficeResult?.dailyBoxOfficeList || [];
+        const rawList = data.boxOfficeResult?.dailyBoxOfficeList || [];
         const range = data.boxOfficeResult?.showRange || "";
+
+        const list = rawList.map((item, idx) => ({
+          ...item,
+          openDt: sanitizeOpenDate(item.openDt, selectedDateStr, (idx % 3) + 1)
+        }));
 
         if (isMounted) {
           setItems(list);
